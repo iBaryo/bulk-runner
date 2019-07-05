@@ -1,0 +1,11 @@
+.git/
+.idea/**/*
+**/*.ts
+!**/*.d.ts
+**/*.test.js
+**/*.js.map
+example
+node_modules
+.npmignore
+.gitignore
+tsconfig.json
