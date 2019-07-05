@@ -1,4 +1,4 @@
-import { asyncBulkMap, IBulkActions } from '../src/asyncBulkMap';
+import { asyncBulkMap, IBulkActions } from '../src';
 
 function repeatArray<T>(arr: T[], repeats: number): T[] {
   return new Array(repeats)
@@ -23,7 +23,7 @@ describe('asyncBulkMap', () => {
       },
       {
         desc: 'hybrid map',
-        input: origin.map(i => i % 2 == 0 ? i : Promise.resolve(i)),
+        input: origin.map(i => (i % 2 == 0 ? i : Promise.resolve(i))),
         output: origin,
       },
       {
@@ -36,13 +36,15 @@ describe('asyncBulkMap', () => {
         input: [origin[0]],
         output: [origin[0]],
       },
-    ].forEach(test => it(`should act as a ${test.desc}`, async () => {
-      const res = await asyncBulkMap(test.input, 1, {
-        map: item => item,
-      });
-      expect(res).not.toBe(origin);
-      expect(res).toEqual(test.output);
-    }));
+    ].forEach(test =>
+      it(`should act as a ${test.desc}`, async () => {
+        const res = await asyncBulkMap(test.input, 1, {
+          map: item => item,
+        });
+        expect(res).not.toBe(origin);
+        expect(res).toEqual(test.output);
+      })
+    );
   });
 
   describe('bulk functionality', () => {
@@ -128,8 +130,8 @@ describe('asyncBulkMap', () => {
         beforeBulk: 222,
         map: 333,
         afterBulk: 444,
-        afterAll: 555
-      } as {[k in keyof IBulkActions<any, any>]: number};
+        afterAll: 555,
+      } as { [k in keyof IBulkActions<any, any>]: number };
 
       const res = await asyncBulkMap(multiBulkOrigin, origin.length, {
         beforeAll: arr => arr.map(() => eventsValues.beforeAll as number),
@@ -156,6 +158,44 @@ describe('asyncBulkMap', () => {
 
       res.forEach(item => expect(item).toBe(eventsValues.afterAll));
     });
+    it('should be possible to async modify data', async () => {
+      const bulkNum = 5;
+      const multiBulkOrigin = repeatArray(origin, bulkNum);
+      const eventsValues = {
+        beforeAll: 111,
+        beforeBulk: 222,
+        map: 333,
+        afterBulk: 444,
+        afterAll: 555,
+      } as { [k in keyof IBulkActions<any, any>]: number };
+
+      const res = await asyncBulkMap(multiBulkOrigin, origin.length, {
+        beforeAll: arr =>
+          Promise.resolve(arr.map(() => eventsValues.beforeAll as number)),
+        beforeBulk: bulk => {
+          expect(bulk.length).toBe(origin.length);
+          bulk.forEach(item => expect(item).toBe(eventsValues.beforeAll));
+          return Promise.resolve(
+            bulk.map(() => eventsValues.beforeBulk as number)
+          );
+        },
+        map: item => {
+          expect(item).toBe(eventsValues.beforeBulk);
+          return Promise.resolve(eventsValues.map);
+        },
+        afterBulk: bulkRes => {
+          expect(bulkRes.length).toBe(origin.length);
+          bulkRes.forEach(item => expect(item).toBe(eventsValues.map));
+          return Promise.resolve(bulkRes.map(() => eventsValues.afterBulk));
+        },
+        afterAll: res => {
+          expect(res.length).toBe(multiBulkOrigin.length);
+          res.forEach(item => expect(item).toBe(eventsValues.afterBulk));
+          return Promise.resolve(res.map(() => eventsValues.afterAll));
+        },
+      });
+
+      res.forEach(item => expect(item).toBe(eventsValues.afterAll));
+    });
   });
 });
-
