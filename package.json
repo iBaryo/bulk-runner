@@ -6,6 +6,10 @@
     "build": "tsdx build",
     "test": "tsdx test"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iBaryo/bulk-runner"
+  },
   "peerDependencies": {},
   "husky": {
     "hooks": {
