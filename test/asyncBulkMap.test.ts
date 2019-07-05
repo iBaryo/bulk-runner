@@ -1,4 +1,4 @@
-import { asyncBulkMap, IBulkActions } from '../index';
+import { asyncBulkMap, IBulkActions } from '../src';
 
 function repeatArray<T>(arr: T[], repeats: number): T[] {
   return new Array(repeats)

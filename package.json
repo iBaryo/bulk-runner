@@ -1,5 +1,12 @@
 {
   "name": "async-bulk-map",
+  "main": "dist/index.js",
+  "umd:main": "dist/bulk-runner.umd.production.js",
+  "module": "dist/bulk-runner.es.production.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "version": "0.1.1",
   "scripts": {
     "start": "tsdx watch",
