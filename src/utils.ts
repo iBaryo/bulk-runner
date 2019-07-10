@@ -7,25 +7,52 @@ type ReturnVal<F extends Function> = F extends (...args: ArgsType<F>) => infer R
 type PromiseReturnVal<F extends Function> = ReturnVal<F> extends Promise<
   unknown
 >
-  ? ReturnVal<F>
-  : Promise<ReturnVal<F>>;
+  ? F
+  : (...args: ArgsType<F>) => Promise<ReturnVal<F>>;
 
-type FunctionAsyncPipe<F extends Function> = ((
-  ...args: ArgsType<F>
-) => PromiseReturnVal<F>) & {
-  pipe: <T extends Function>(fn: T) => FunctionAsyncPipe<F>;
-  then: <T extends Function>(fn: T) => FunctionAsyncPipe<F>;
+type Nothing = void | null | undefined;
+
+type EmptyPipe<F extends Function> = (...args: ArgsType<F>) => ArgsType<F>;
+
+type PipeFunctions<F1 extends Function, F2 extends Function> = ReturnVal<
+  F2
+> extends Nothing
+  ? ReturnVal<F1> extends Nothing
+    ? EmptyPipe<F1>
+    : F1
+  : (...args: ArgsType<F1>) => ReturnVal<F2>;
+
+// type UnArrayify<T> = T extends Array<unknown> ? T[0] : T;
+
+type ReturnValOrArgs<F extends Function> = ReturnVal<F> extends Nothing
+  ? ArgsType<F> // UnArrayify<ArgsType<F>>
+  : ReturnVal<F>;
+
+type UnPromise<T> = T extends Promise<infer R> ? R : T;
+type Arrayify<T> = T extends Array<any> ? T : T[];
+
+type ExtendingPipeFn<F extends Function> = (
+  ...args: Arrayify<UnPromise<ReturnValOrArgs<F>>>
+) => unknown;
+
+type AsyncPipeFunction<O extends Function> = PromiseReturnVal<O> & {
+  pipe: <N extends ExtendingPipeFn<O>>(
+    fn: N
+  ) => AsyncPipeFunction<PipeFunctions<O, N>>;
+  then: <N extends ExtendingPipeFn<O>>(
+    fn: N
+  ) => AsyncPipeFunction<PipeFunctions<O, N>>;
 };
 
 export function createPipe<T extends Function>(
   pipeSrc: T
-): FunctionAsyncPipe<T> {
+): AsyncPipeFunction<T> {
   return createFunctionsPipe([pipeSrc]);
 }
 
 function createFunctionsPipe<T extends Function>(
   pipeFns: Function[]
-): FunctionAsyncPipe<T> {
+): AsyncPipeFunction<T> {
   return (Object.assign(
     async function asyncReduce(...args: any[]) {
       let res = args;
@@ -35,18 +62,18 @@ function createFunctionsPipe<T extends Function>(
       return res;
     },
     {
-      pipe<N extends Function>(this: FunctionAsyncPipe<T>, nextFn: N) {
+      pipe<N extends Function>(this: AsyncPipeFunction<T>, nextFn: N) {
         pipeFns.push(nextFn);
         return this;
       },
-      then<N extends Function>(this: FunctionAsyncPipe<T>, nextFn: N) {
+      then<N extends Function>(this: AsyncPipeFunction<T>, nextFn: N) {
         return createFunctionsPipe(pipeFns.concat(nextFn));
       },
     }
-  ) as Function) as FunctionAsyncPipe<T>;
+  ) as Function) as AsyncPipeFunction<T>;
 }
 
-export function logBulk<T>(bulk: T[], bulkIndex: number) {
+export function logBulk<T>(bulk: T[], bulkIndex: number): void {
   console.log(`bulk index: ${bulkIndex} (${bulk.length} entries)`);
 }
 

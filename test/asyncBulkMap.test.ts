@@ -1,4 +1,4 @@
-import { asyncBulkMap, IBulkActions } from '../src';
+import { asyncBulkMap, createPipe, IBulkActions, logBulk } from '../src';
 
 function repeatArray<T>(arr: T[], repeats: number): T[] {
   return new Array(repeats)
@@ -7,7 +7,7 @@ function repeatArray<T>(arr: T[], repeats: number): T[] {
 }
 
 describe('asyncBulkMap', () => {
-  const origin = [1, 2, 3, 4];
+  const origin: number[] = [1, 2, 3, 4];
 
   describe('map functionality', () => {
     [
@@ -196,6 +196,40 @@ describe('asyncBulkMap', () => {
       });
 
       res.forEach(item => expect(item).toBe(eventsValues.afterAll));
+    });
+  });
+
+  describe('utils integration', () => {
+    it('should log bulk', async () => {
+      const builkSize = 2;
+      spyOn(console, 'log');
+
+      const res = await asyncBulkMap(origin, builkSize, {
+        beforeBulk: createPipe(logBulk),
+        map: item => item,
+      });
+
+      expect(res).toEqual(origin);
+      expect(console.log).toHaveBeenCalledTimes(origin.length / builkSize);
+    });
+
+    it('should log bulk and pipe to handling function', async () => {
+      const builkSize = 2;
+      spyOn(console, 'log');
+      const pipeSpy = jasmine.createSpy();
+
+      const res = await asyncBulkMap(origin, builkSize, {
+        beforeBulk: createPipe(logBulk).pipe((bulk, bulkIndex: number) => {
+          expect(bulk.length).toBe(origin.length / builkSize);
+          expect(bulkIndex >= 0).toBeTruthy();
+          pipeSpy();
+        }),
+        map: item => item,
+      });
+
+      expect(res).toEqual(origin);
+      expect(console.log).toHaveBeenCalledTimes(origin.length / builkSize);
+      expect(pipeSpy).toHaveBeenCalledTimes(origin.length / builkSize);
     });
   });
 });
