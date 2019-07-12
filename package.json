@@ -40,5 +40,11 @@
     "pretty-quick": "^1.11.0",
     "tsdx": "^0.6.1",
     "typescript": "^3.5.1"
-  }
+  },
+  "keywords": [
+    "bulk",
+    "batch",
+    "async",
+    "map"
+  ]
 }
